@@ -4,99 +4,51 @@
 
 # dotenv.ai
 
-Catch secrets before they escape.
+Your repository isn't the only place secrets leak anymore.
 
-`dotenvai` is an open-source, private-by-default scanner for code changes. It scans
-only added diff lines, reports where a likely credential appeared, and never prints
-the matched value.
+`dotenvai audit` finds credentials retained in local AI coding-agent transcripts,
+scratchpads, tool output, caches, downloads, and workspace artifacts. It supports
+Claude Code, Codex, OpenCode, and Cursor.
 
-Detection combines Gitleaks' 200+ maintained provider fingerprints with
-dotenv.ai-specific contextual checks for suspicious environment assignments.
+Everything stays on your machine. SQLite histories are opened read-only, binary
+and oversized artifacts are skipped, and reports never include matched values.
 
-## Agent transcript audit
+## Usage
 
-Find credentials retained in local AI coding-agent session history:
-
-```sh
-dotenvai audit
-dotenvai audit --agent claude --agent codex
-dotenvai audit --format json
-```
-
-The audit discovers Claude Code, Codex, OpenCode, and Cursor transcripts plus
-known scratchpad, tool-output, cache, and workspace artifact locations. It scans
-locally, opens SQLite histories read-only, skips binary and oversized artifacts,
-and reports fingerprints and locations without printing matched values.
-
-## CLI
-
-Build it:
+Build the CLI:
 
 ```sh
 go build -o dotenvai ./cmd/dotenvai
 ```
 
-Scan staged changes before committing:
+Audit every supported agent:
 
 ```sh
-./dotenvai scan --staged
+./dotenvai audit
 ```
 
-Scan a pull-request range:
+Select one or more agents:
 
 ```sh
-./dotenvai scan --base origin/main --head HEAD
+./dotenvai audit --agent claude --agent codex
 ```
 
-Machine-readable and GitHub annotation output are built in:
+Produce a machine-readable report:
 
 ```sh
-./dotenvai scan --staged --format json
-./dotenvai scan --staged --format github --fail-on high
+./dotenvai audit --format json
 ```
 
-Add `dotenvai:allow` to a line to suppress an intentional fixture. Keep a reason
-beside the suppression so reviewers can evaluate it.
-
-Exit codes are `0` for a clean or non-blocking scan, `1` for a usage/runtime error,
-and `2` when findings meet the configured failure threshold.
-
-## GitHub Action
-
-The repository is itself a Docker action. Pull requests must be checked out with
-full history so the base commit is available:
-
-```yaml
-name: secrets
-on: pull_request
-permissions:
-  contents: read
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: dotenvai/dotenvai@v1
-        with:
-          base: ${{ github.event.pull_request.base.sha }}
-          head: ${{ github.event.pull_request.head.sha }}
-          fail-on: high
-```
-
-Findings appear as inline workflow annotations. Detected values are not written to
-logs or artifacts.
+Exit codes are `0` when no candidates are found, `1` for usage or runtime errors,
+and `2` when the audit finds possible exposures.
 
 ## Development
 
 ```sh
 go test ./...
 go vet ./...
-docker build -t dotenvai-action .
+go build ./cmd/dotenvai
 ```
-
-See [the product boundary](docs/product.md).
 
 Third-party licenses and attribution are recorded in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

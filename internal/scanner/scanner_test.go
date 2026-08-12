@@ -52,11 +52,3 @@ func mustScan(t *testing.T, candidates []Candidate) []Finding {
 	}
 	return findings
 }
-
-func TestParseUnifiedDiffTracksAddedLines(t *testing.T) {
-	diff := "diff --git a/a b/a\n+++ b/a\n@@ -3,2 +3,3 @@\n same\n+TOKEN=abcDEF1234567890\n tail\n" // dotenvai:allow test fixture
-	got := ParseUnifiedDiff(diff)
-	if len(got) != 1 || got[0].File != "a" || got[0].Line != 4 {
-		t.Fatalf("got %#v", got)
-	}
-}

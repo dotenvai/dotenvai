@@ -18,7 +18,7 @@ func TestRootExposesCobraCommands(t *testing.T) {
 	if code := Run([]string{"help"}, &out, &out); code != 0 {
 		t.Fatalf("code=%d out=%q", code, out.String())
 	}
-	for _, command := range []string{"audit", "scan", "version", "completion"} {
+	for _, command := range []string{"audit", "version", "completion"} {
 		if !strings.Contains(out.String(), command) {
 			t.Fatalf("help does not contain %q:\n%s", command, out.String())
 		}
@@ -30,15 +30,5 @@ func TestAuditRejectsUnknownAgent(t *testing.T) {
 	code := Run([]string{"audit", "--agent", "made-up"}, &stdout, &stderr)
 	if code != 1 || !strings.Contains(stderr.String(), "unsupported agent") {
 		t.Fatalf("code=%d stderr=%q", code, stderr.String())
-	}
-}
-
-func TestScanRejectsInvalidThreshold(t *testing.T) {
-	var out bytes.Buffer
-	if code := Run([]string{"scan", "--fail-on", "sometimes"}, &out, &out); code != 1 {
-		t.Fatalf("code=%d out=%q", code, out.String())
-	}
-	if !strings.Contains(out.String(), "use any, high, or never") {
-		t.Fatalf("out=%q", out.String())
 	}
 }

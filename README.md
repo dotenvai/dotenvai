@@ -13,6 +13,20 @@ the matched value.
 Detection combines Gitleaks' 200+ maintained provider fingerprints with
 dotenv.ai-specific contextual checks for suspicious environment assignments.
 
+## Agent transcript audit
+
+Find credentials retained in local AI coding-agent session history:
+
+```sh
+dotenvai audit
+dotenvai audit --agent claude --agent codex
+dotenvai audit --format json
+```
+
+The audit discovers Claude Code, Codex, OpenCode, and Cursor history in their
+platform-default locations. It scans locally, opens SQLite histories read-only,
+and reports fingerprints and locations without printing matched values.
+
 ## CLI
 
 Build it:

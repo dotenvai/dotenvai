@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.dotenvai/
+.bazel/
+/dotenvai
+/server
+coverage.out
+tmp/

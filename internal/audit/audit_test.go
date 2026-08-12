@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,8 +47,29 @@ func TestReadSQLite(t *testing.T) {
 
 func TestSelected(t *testing.T) {
 	got := Selected([]string{"CODEX", "cursor"})
-	if len(got) != 2 || got[0].Agent != "codex" || got[1].Agent != "cursor" {
+	if len(got) != 4 || got[0].Agent != "codex" || got[1].Agent != "codex" || got[2].Agent != "cursor" || got[3].Agent != "cursor" {
 		t.Fatalf("got=%#v", got)
+	}
+}
+
+func TestReadArtifactSkipsBinaryAndLargeFiles(t *testing.T) {
+	dir := t.TempDir()
+	binary := filepath.Join(dir, "binary")
+	if err := os.WriteFile(binary, []byte{'a', 0, 'b'}, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readArtifact(binary); !errors.Is(err, errSkippedArtifact) {
+		t.Fatalf("err=%v", err)
+	}
+	large := filepath.Join(dir, "large")
+	if err := os.WriteFile(large, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Truncate(large, maxArtifactSize+1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readArtifact(large); !errors.Is(err, errSkippedArtifact) {
+		t.Fatalf("err=%v", err)
 	}
 }
 

@@ -2,10 +2,12 @@ package audit
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,6 +20,7 @@ import (
 
 type Finding struct {
 	Agent       string          `json:"agent"`
+	Surface     string          `json:"surface"`
 	SessionFile string          `json:"session_file"`
 	Record      string          `json:"record,omitempty"`
 	Finding     scanner.Finding `json:"finding"`
@@ -54,8 +57,13 @@ func Run(ctx context.Context, agents []string) (Result, error) {
 				candidates, err = readLines(path)
 			case SQLite:
 				candidates, records, err = readSQLite(ctx, path, source.Queries)
+			case Files:
+				candidates, err = readArtifact(path)
 			}
 			if err != nil {
+				if errors.Is(err, errSkippedArtifact) {
+					continue
+				}
 				result.Warnings = append(result.Warnings, fmt.Sprintf("%s: %s: %v", source.Agent, path, err))
 				continue
 			}
@@ -69,7 +77,7 @@ func Run(ctx context.Context, agents []string) (Result, error) {
 				if finding.Line > 0 && finding.Line <= len(records) {
 					record = records[finding.Line-1]
 				}
-				result.Findings = append(result.Findings, Finding{Agent: source.Agent, SessionFile: path, Record: record, Finding: finding})
+				result.Findings = append(result.Findings, Finding{Agent: source.Agent, Surface: source.Surface, SessionFile: path, Record: record, Finding: finding})
 			}
 		}
 	}
@@ -91,6 +99,9 @@ func discover(source Source) ([]string, error) {
 			if entry.IsDir() {
 				return nil
 			}
+			if entry.Type()&os.ModeSymlink != 0 {
+				return nil
+			}
 			matched, _ := filepath.Match(strings.ReplaceAll(pattern, "**/", ""), path)
 			if strings.Contains(pattern, "**") {
 				matched = strings.HasSuffix(path, strings.TrimPrefix(filepath.Ext(pattern), "*"))
@@ -107,6 +118,34 @@ func discover(source Source) ([]string, error) {
 	}
 	sort.Strings(files)
 	return files, nil
+}
+
+const maxArtifactSize = 10 << 20
+
+var errSkippedArtifact = errors.New("artifact is binary, empty, or too large")
+
+func readArtifact(path string) ([]scanner.Candidate, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Size() == 0 || info.Size() > maxArtifactSize {
+		return nil, errSkippedArtifact
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	probe := make([]byte, 8192)
+	n, err := file.Read(probe)
+	file.Close()
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+	if bytes.IndexByte(probe[:n], 0) >= 0 {
+		return nil, errSkippedArtifact
+	}
+	return readLines(path)
 }
 
 func globRoot(pattern string) string {

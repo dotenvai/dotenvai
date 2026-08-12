@@ -1,7 +1,9 @@
 package audit
 
 import (
+	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -12,36 +14,52 @@ type Storage string
 const (
 	JSONL  Storage = "jsonl"
 	SQLite Storage = "sqlite"
+	Files  Storage = "files"
 )
 
 // Source is deliberately declarative: new agent layouts and database schema
 // variants should normally require only another path or query.
 type Source struct {
 	Agent   string
+	Surface string
 	Storage Storage
 	Paths   map[string][]string
 	Queries []string
 }
 
 var Sources = []Source{
-	{Agent: "claude", Storage: JSONL, Paths: map[string][]string{
+	{Agent: "claude", Surface: "transcript", Storage: JSONL, Paths: map[string][]string{
 		"all": {"~/.claude/projects/**/*.jsonl"},
 	}},
-	{Agent: "codex", Storage: JSONL, Paths: map[string][]string{
+	{Agent: "claude", Surface: "artifact", Storage: Files, Paths: map[string][]string{
+		"all": {"${TMPDIR:-/tmp}/claude-${UID}/**/*", "~/.claude/cache/**/*", "~/.claude/downloads/**/*"},
+	}},
+	{Agent: "codex", Surface: "transcript", Storage: JSONL, Paths: map[string][]string{
 		"all": {"~/.codex/sessions/**/*.jsonl"},
 	}},
-	{Agent: "opencode", Storage: SQLite, Paths: map[string][]string{
+	{Agent: "codex", Surface: "artifact", Storage: Files, Paths: map[string][]string{
+		"all": {"~/.codex/tmp/**/*"},
+	}},
+	{Agent: "opencode", Surface: "transcript", Storage: SQLite, Paths: map[string][]string{
 		"all": {"${XDG_DATA_HOME:-~/.local/share}/opencode/opencode*.db"},
 	}, Queries: []string{
 		"SELECT 'message:' || id, data FROM message",
 		"SELECT 'part:' || id, data FROM part",
 	}},
-	{Agent: "cursor", Storage: SQLite, Paths: map[string][]string{
+	{Agent: "opencode", Surface: "artifact", Storage: Files, Paths: map[string][]string{
+		"all": {"${XDG_DATA_HOME:-~/.local/share}/opencode/tool-output/**/*", "${TMPDIR:-/tmp}/opencode-${UID}/**/*"},
+	}},
+	{Agent: "cursor", Surface: "transcript", Storage: SQLite, Paths: map[string][]string{
 		"linux":   {"~/.config/Cursor/User/globalStorage/state.vscdb", "~/.config/Cursor/User/workspaceStorage/*/state.vscdb"},
 		"darwin":  {"~/Library/Application Support/Cursor/User/globalStorage/state.vscdb", "~/Library/Application Support/Cursor/User/workspaceStorage/*/state.vscdb"},
 		"windows": {"${APPDATA}/Cursor/User/globalStorage/state.vscdb", "${APPDATA}/Cursor/User/workspaceStorage/*/state.vscdb"},
 	}, Queries: []string{
 		"SELECT key, value FROM ItemTable WHERE key LIKE '%composer%' OR key LIKE '%chat%' OR key LIKE '%aiService%'",
+	}},
+	{Agent: "cursor", Surface: "artifact", Storage: Files, Paths: map[string][]string{
+		"linux":   {"~/.config/Cursor/User/workspaceStorage/*/**/*"},
+		"darwin":  {"~/Library/Application Support/Cursor/User/workspaceStorage/*/**/*"},
+		"windows": {"${APPDATA}/Cursor/User/workspaceStorage/*/**/*"},
 	}},
 }
 
@@ -87,6 +105,15 @@ func expandPath(path string) string {
 		xdg = filepath.Join(home, ".local", "share")
 	}
 	path = strings.ReplaceAll(path, "${XDG_DATA_HOME:-~/.local/share}", xdg)
+	tmp := os.TempDir()
+	path = strings.ReplaceAll(path, "${TMPDIR:-/tmp}", tmp)
+	uid := os.Getenv("UID")
+	if uid == "" {
+		if current, err := user.Current(); err == nil {
+			uid = current.Uid
+		}
+	}
+	path = strings.ReplaceAll(path, "${UID}", fmt.Sprint(uid))
 	path = os.ExpandEnv(path)
 	if path == "~" {
 		return home

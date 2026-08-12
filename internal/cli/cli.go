@@ -96,7 +96,7 @@ func newAuditCommand() *cobra.Command {
 					if finding.Record != "" {
 						location += " (" + finding.Record + ")"
 					}
-					fmt.Fprintf(cmd.OutOrStdout(), "%s  %-8s %s\n  %s\n", strings.ToUpper(string(finding.Finding.Severity)), finding.Agent, finding.Finding.Description, location)
+					fmt.Fprintf(cmd.OutOrStdout(), "%s  %-8s %-10s %s\n  %s\n", strings.ToUpper(string(finding.Finding.Severity)), finding.Agent, finding.Surface, finding.Finding.Description, location)
 				}
 				return errFindings
 			default:

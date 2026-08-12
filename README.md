@@ -23,8 +23,9 @@ dotenvai audit --agent claude --agent codex
 dotenvai audit --format json
 ```
 
-The audit discovers Claude Code, Codex, OpenCode, and Cursor history in their
-platform-default locations. It scans locally, opens SQLite histories read-only,
+The audit discovers Claude Code, Codex, OpenCode, and Cursor transcripts plus
+known scratchpad, tool-output, cache, and workspace artifact locations. It scans
+locally, opens SQLite histories read-only, skips binary and oversized artifacts,
 and reports fingerprints and locations without printing matched values.
 
 ## CLI

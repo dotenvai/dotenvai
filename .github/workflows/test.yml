@@ -1,0 +1,20 @@
+name: test
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build ./cmd/dotenvai
+      - run: go run ./cmd/dotenvai validate skills/twisp
+      - run: go run ./cmd/dotenvai validate-manifest examples/twisp.agent-skills.json

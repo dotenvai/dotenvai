@@ -1,0 +1,11 @@
+{
+  "schema_version": "0.1",
+  "publishers": [
+    {
+      "domain": "twisp.com",
+      "name": "Twisp",
+      "discovery_url": "https://www.twisp.com/.well-known/agent-skills.json",
+      "status": "reference"
+    }
+  ]
+}

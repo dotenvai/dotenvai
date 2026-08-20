@@ -1,0 +1,16 @@
+{
+  "schema_version": "0.1",
+  "publisher": {
+    "name": "Twisp",
+    "url": "https://www.twisp.com"
+  },
+  "skills": [
+    {
+      "name": "twisp",
+      "description": "Call the Twisp financial ledger GraphQL API, authenticate requests, inspect the schema, and troubleshoot API errors.",
+      "version": "0.1.0",
+      "source": "https://github.com/dotenvai/dotenvai/tree/main/skills/twisp",
+      "compatibility": ["claude-code", "codex"]
+    }
+  ]
+}
